@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 )
 
@@ -65,16 +66,30 @@ func main() {
 		Addr:         fmt.Sprintf(":%d", cfg.port),
 		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 20 * time.Second,
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
 	logger.Info("starting server", slog.String("addr", srv.Addr), slog.String("env", cfg.env))
 
-	err = srv.ListenAndServe()
-	logger.Error(err.Error())
-	os.Exit(1)
+	go func() {
+		err = srv.ListenAndServe()
+		logger.Error(err.Error())
+		os.Exit(1)
+	}()
+
+	sig := make(chan os.Signal)
+	signal.Notify(sig, os.Interrupt, os.Kill)
+	<-sig
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	err = srv.Shutdown(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 }
 
 func openDB(cfg config) (*sql.DB, error) {
