@@ -4,13 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/lucianboboc/greenlight/internal/data"
 	"log/slog"
-	"net/http"
 	"os"
-	"os/signal"
 	"time"
 )
 
@@ -70,30 +67,7 @@ func main() {
 		models: data.NewModels(db),
 	}
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 20 * time.Second,
-		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
-	}
-
-	logger.Info("starting server", slog.String("addr", srv.Addr), slog.String("env", cfg.env))
-
-	go func() {
-		err = srv.ListenAndServe()
-		logger.Error(err.Error())
-		os.Exit(1)
-	}()
-
-	sig := make(chan os.Signal)
-	signal.Notify(sig, os.Interrupt, os.Kill)
-	<-sig
-
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	err = srv.Shutdown(ctx)
+	err = app.serve()
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
