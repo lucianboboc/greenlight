@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
+	"expvar"
 	"flag"
 	_ "github.com/lib/pq"
 	"github.com/lucianboboc/greenlight/internal/data"
 	"github.com/lucianboboc/greenlight/internal/mailer"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -86,6 +88,20 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	expvar.NewString("version").Set(version)
+
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
+
+	expvar.Publish("database", expvar.Func(func() any {
+		return db.Stats()
+	}))
+
+	expvar.Publish("timestamp", expvar.Func(func() any {
+		return time.Now().Unix()
+	}))
 
 	app := &application{
 		config: cfg,
