@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/lucianboboc/greenlight/internal/data"
 	"github.com/lucianboboc/greenlight/internal/mailer"
+	"github.com/lucianboboc/greenlight/internal/vcs"
 	"log/slog"
 	"os"
 	"runtime"
@@ -16,7 +18,9 @@ import (
 	"time"
 )
 
-const version = "1.0.0"
+var (
+	version = vcs.Version()
+)
 
 type config struct {
 	port int
@@ -78,7 +82,15 @@ func main() {
 		cfg.cors.trustedOrigins = strings.Split(val, " ")
 		return nil
 	})
+
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		os.Exit(0)
+	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
