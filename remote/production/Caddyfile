@@ -1,0 +1,11 @@
+# Set the email address that should be used to contact you if there is a problem with
+# your TLS certificates.
+#{
+#    email info@lucianboboc.com
+#}
+
+# Remove the http:// prefix from your site address when a domain is configured
+http://164.92.234.94 {
+    respond /debug/* "Not Permitted" 403
+    reverse_proxy localhost:4000
+}
